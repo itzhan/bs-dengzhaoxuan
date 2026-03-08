@@ -1,0 +1,229 @@
+:root {
+  --brand-700: #1f6f43;
+  --brand-600: #2b8a57;
+  --brand-500: #3ca266;
+  --brand-300: #8fd3a8;
+  --soil-700: #7a5b3b;
+  --soil-500: #9a7550;
+  --grain-300: #f3e6cf;
+  --cream-50: #fbfaf5;
+  --mist-100: #eef5ee;
+  --ink-900: #1b1f1c;
+  --ink-700: #2e3a32;
+  --ink-500: #4f5f55;
+  --accent-500: #f3a43b;
+  --accent-600: #df8c1d;
+  --shadow-soft: 0 18px 40px rgba(31, 111, 67, 0.15);
+  --shadow-card: 0 14px 30px rgba(31, 111, 67, 0.12);
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --color-primary-7: #1f6f43;
+  --color-primary-6: #2b8a57;
+  --color-primary-5: #3ca266;
+  --color-primary-4: #65b983;
+  --color-primary-3: #8fd3a8;
+  --color-primary-2: #cfead8;
+  --color-primary-1: #e9f5ee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--ink-900);
+  background: radial-gradient(circle at 15% 20%, #f6fbf4 0%, #eef6ef 45%, #f8f2e6 100%);
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#app {
+  min-height: 100%;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-wrap {
+  flex: 1;
+  padding: 24px 0 48px;
+}
+
+.section {
+  width: min(1200px, 92vw);
+  margin: 0 auto;
+}
+
+.section + .section {
+  margin-top: 40px;
+}
+
+.section-title {
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
+  font-size: clamp(24px, 3.4vw, 36px);
+  margin: 0 0 6px;
+  color: var(--ink-900);
+}
+
+.section-subtitle {
+  color: var(--ink-500);
+  margin: 0 0 18px;
+  font-size: 15px;
+}
+
+.gradient-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, rgba(60, 162, 102, 0.16), rgba(243, 164, 59, 0.2));
+  color: var(--brand-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card-surface {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(31, 111, 67, 0.12);
+}
+
+.hero {
+  padding: 50px 0 10px;
+}
+
+.hero-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(243, 230, 207, 0.88));
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(60, 162, 102, 0.12);
+}
+
+.hero-title {
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
+  font-size: clamp(30px, 4.6vw, 52px);
+  margin: 8px 0 12px;
+  color: var(--ink-900);
+}
+
+.hero-text {
+  color: var(--ink-500);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(31, 111, 67, 0.12);
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.flow-card {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(31, 111, 67, 0.12);
+}
+
+.card-title {
+  font-weight: 600;
+  margin: 6px 0 4px;
+}
+
+.card-desc {
+  color: var(--ink-500);
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-pill {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(60, 162, 102, 0.1);
+  color: var(--brand-700);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.soft-panel {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(31, 111, 67, 0.12);
+}
+
+.footer {
+  padding: 26px 0 40px;
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+}
+
+.footer-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink-700);
+}
+
+@media (max-width: 720px) {
+  .hero-card {
+    padding: 22px;
+  }
+
+  .hero-actions {
+    width: 100%;
+  }
+}
