@@ -82,4 +82,5 @@
   }
 
   onMounted(loadConversations)
+  onActivated(loadConversations)
 </script>

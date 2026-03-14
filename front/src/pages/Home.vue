@@ -86,8 +86,13 @@ onMounted(loadData)
     <p class="section-subtitle">从发布到交付，平台覆盖关键节点，提升效率与品质稳定性。</p>
     <div class="flow-grid">
       <div v-for="step in coreFlow" :key="step.title" class="flow-card">
-        <div class="gradient-badge">{{ step.title }}</div>
-        <div class="card-desc" style="margin-top: 10px;">{{ step.desc }}</div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <div class="flow-icon-wrap">
+            <component :is="step.icon" style="font-size: 22px; color: #2b8a57;" />
+          </div>
+          <div class="gradient-badge">{{ step.title }}</div>
+        </div>
+        <div class="card-desc">{{ step.desc }}</div>
       </div>
     </div>
   </section>
@@ -142,9 +147,14 @@ onMounted(loadData)
     <p class="section-subtitle">围绕交易、履约、溯源与服务持续迭代。</p>
     <a-row :gutter="20">
       <a-col v-for="item in platformHighlights" :key="item.title" :xs="24" :md="12">
-        <div class="soft-panel" style="height: 100%;">
-          <div class="card-title">{{ item.title }}</div>
-          <p class="card-desc">{{ item.desc }}</p>
+        <div class="soft-panel" style="height: 100%; display: flex; gap: 14px; align-items: flex-start;">
+          <div class="flow-icon-wrap" style="flex-shrink: 0; margin-top: 2px;">
+            <component :is="item.icon" style="font-size: 22px; color: #2b8a57;" />
+          </div>
+          <div>
+            <div class="card-title">{{ item.title }}</div>
+            <p class="card-desc">{{ item.desc }}</p>
+          </div>
         </div>
       </a-col>
     </a-row>

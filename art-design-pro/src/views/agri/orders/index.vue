@@ -144,4 +144,5 @@
   }
 
   onMounted(load)
+  onActivated(load)
 </script>

@@ -20,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // 1. 自动创建管理员账号
         long adminCount = userService.count(new LambdaQueryWrapper<User>().eq(User::getRole, UserRole.ADMIN.getCode()));
         if (adminCount == 0) {
             User admin = new User();
@@ -29,6 +30,18 @@ public class DataInitializer implements CommandLineRunner {
             admin.setStatus(1);
             admin.setRealName("系统管理员");
             userService.save(admin);
+        }
+
+        // 2. 修复 SQL 中 dummy 占位密码 → 统一设为 123456
+        java.util.List<User> dummyUsers = userService.list(
+            new LambdaQueryWrapper<User>().likeRight(User::getPassword, "$2a$10$dummy")
+        );
+        if (!dummyUsers.isEmpty()) {
+            String encoded = passwordEncoder.encode("123456");
+            for (User u : dummyUsers) {
+                u.setPassword(encoded);
+            }
+            userService.updateBatchById(dummyUsers);
         }
     }
 }
