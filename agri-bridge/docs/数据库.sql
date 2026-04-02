@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS biz_listing (
   updated_at DATETIME NOT NULL,
   created_by BIGINT NULL,
   updated_by BIGINT NULL,
+  remark VARCHAR(500) NULL,
   deleted TINYINT NOT NULL DEFAULT 0,
   KEY idx_list_type (type),
   KEY idx_list_pub (publisher_id)
@@ -192,6 +193,7 @@ CREATE TABLE IF NOT EXISTS biz_after_sale (
   updated_at DATETIME NOT NULL,
   created_by BIGINT NULL,
   updated_by BIGINT NULL,
+  remark VARCHAR(500) NULL,
   deleted TINYINT NOT NULL DEFAULT 0,
   KEY idx_after_order (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
