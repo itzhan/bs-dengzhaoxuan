@@ -18,6 +18,7 @@ public class AfterSale extends BaseEntity {
     private String reason;
     private BigDecimal amount;
     private Integer status;
+    private String remark;
     private Long auditBy;
     private LocalDateTime auditTime;
 }

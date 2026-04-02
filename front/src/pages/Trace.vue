@@ -7,6 +7,30 @@ const loading = ref(false)
 const error = ref('')
 const trace = ref(null)
 
+const traceInfoLabels = {
+  farm: '产地/农场', pesticide: '农药使用', fertilizer: '肥料', irrigation: '灌溉方式',
+  soil: '土壤类型', variety: '品种', origin: '产地', method: '种植方式',
+  certification: '认证', storage: '储存方式', transport: '运输方式', temperature: '温控',
+  inspector: '质检员', result: '检测结果', weight: '重量', grade: '等级',
+  batch: '批次', note: '备注', remark: '说明'
+}
+
+const parsedTraceInfo = computed(() => {
+  if (!trace.value?.traceInfo) return null
+  try {
+    const obj = typeof trace.value.traceInfo === 'string'
+      ? JSON.parse(trace.value.traceInfo)
+      : trace.value.traceInfo
+    if (typeof obj !== 'object' || obj === null) return null
+    return Object.entries(obj).map(([key, value]) => ({
+      label: traceInfoLabels[key] || key,
+      value: String(value)
+    }))
+  } catch {
+    return null
+  }
+})
+
 const timeline = computed(() => {
   if (!trace.value) return []
   const items = []
@@ -81,7 +105,14 @@ const handleSearch = async () => {
             </div>
             <div class="soft-panel">
               <div class="card-title">溯源说明</div>
-              <div class="card-desc">{{ trace.traceInfo || '暂无补充说明' }}</div>
+              <template v-if="parsedTraceInfo">
+                <a-descriptions :column="1" size="small" bordered style="margin-top: 8px;">
+                  <a-descriptions-item v-for="item in parsedTraceInfo" :key="item.label" :label="item.label">
+                    {{ item.value }}
+                  </a-descriptions-item>
+                </a-descriptions>
+              </template>
+              <div v-else class="card-desc">{{ trace.traceInfo || '暂无补充说明' }}</div>
             </div>
             <div class="soft-panel">
               <div class="card-title">溯源状态</div>

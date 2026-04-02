@@ -11,6 +11,11 @@
             highlight-current-row
           >
             <ElTableColumn prop="id" label="#" width="60" />
+            <ElTableColumn label="对方" width="100">
+              <template #default="{ row }">
+                {{ getOtherUserName(row) }}
+              </template>
+            </ElTableColumn>
             <ElTableColumn prop="lastMessage" label="最近消息" />
             <ElTableColumn prop="lastTime" label="时间" width="140" />
           </ElTable>
@@ -21,7 +26,9 @@
           <div class="font-medium mb-2">消息</div>
           <div class="flex-1 overflow-auto">
             <ElTable :data="messages" height="420" border>
-              <ElTableColumn prop="senderId" label="发送人" width="120" />
+              <ElTableColumn label="发送人" width="120">
+                <template #default="{ row }">{{ userMap[row.senderId] || row.senderId }}</template>
+              </ElTableColumn>
               <ElTableColumn prop="content" label="内容" />
               <ElTableColumn prop="sentAt" label="时间" width="160" />
             </ElTable>
@@ -40,12 +47,22 @@
   import { ElMessage } from 'element-plus'
   import { agriApi } from '@/api/agri'
   import { useUserStore } from '@/store/modules/user'
+  import { useLookup } from '../composables/useLookup'
 
   const userStore = useUserStore()
+  const { userMap, loadUsers } = useLookup()
+  onMounted(() => loadUsers())
+
   const conversations = ref<any[]>([])
   const messages = ref<any[]>([])
   const activeConversation = ref<any>(null)
   const content = ref('')
+
+  const getOtherUserName = (row: any) => {
+    const uid = userStore.info?.userId
+    const otherId = row.userAId === uid ? row.userBId : row.userAId
+    return userMap.value[otherId] || otherId
+  }
 
   const loadConversations = async () => {
     const data = await agriApi.getConversations({ page: 1, size: 50 })

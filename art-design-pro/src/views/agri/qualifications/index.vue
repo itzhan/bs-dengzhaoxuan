@@ -13,7 +13,9 @@
 
       <ElTable :data="records" border style="width: 100%">
         <ElTableColumn prop="id" label="ID" width="80" />
-        <ElTableColumn prop="userId" label="用户ID" width="100" />
+        <ElTableColumn prop="userId" label="用户" width="120">
+          <template #default="{ row }">{{ userMap[row.userId] || row.userId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="type" label="类型" width="140" />
         <ElTableColumn prop="number" label="编号" width="180" />
         <ElTableColumn prop="status" label="状态" width="90">
@@ -24,7 +26,7 @@
           <template #default="{ row }">
             <ElButton size="small" @click="openDialog(row)">编辑</ElButton>
             <ElButton v-if="isAdmin" size="small" type="success" @click="audit(row, 2)">通过</ElButton>
-            <ElButton v-if="isAdmin" size="small" type="danger" @click="audit(row, 3)">驳回</ElButton>
+            <ElButton v-if="isAdmin" size="small" type="danger" @click="openRejectDialog(row)">驳回</ElButton>
           </template>
         </ElTableColumn>
       </ElTable>
@@ -53,6 +55,18 @@
         <ElButton type="primary" @click="submit">保存</ElButton>
       </template>
     </ElDialog>
+
+    <ElDialog v-model="rejectDialogVisible" title="驳回原因" width="420px">
+      <ElForm label-width="80px">
+        <ElFormItem label="驳回原因">
+          <ElInput v-model="rejectRemark" type="textarea" rows="3" placeholder="请填写驳回原因（必填）" />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="rejectDialogVisible = false">取消</ElButton>
+        <ElButton type="danger" @click="submitReject">确认驳回</ElButton>
+      </template>
+    </ElDialog>
   </div>
 </template>
 
@@ -60,9 +74,14 @@
   import { ElMessage } from 'element-plus'
   import { agriApi } from '@/api/agri'
   import { useUserStore } from '@/store/modules/user'
+  import { useLookup } from '../composables/useLookup'
 
   const userStore = useUserStore()
   const isAdmin = computed(() => userStore.info?.roles?.includes('R_ADMIN'))
+
+  const { userMap, loadUsers } = useLookup()
+  onMounted(() => loadUsers())
+
   const query = reactive({
     page: 1,
     size: 10,
@@ -113,14 +132,18 @@
     dialogTitle.value = row ? '编辑资质' : '提交资质'
     editingId.value = row?.id ?? null
     if (row) {
-      Object.assign(form, row)
+      Object.assign(form, {
+        type: row.type ?? '',
+        number: row.number ?? '',
+        fileUrl: row.fileUrl ?? ''
+      })
     } else {
       Object.assign(form, { type: '', number: '', fileUrl: '' })
     }
   }
 
   const submit = async () => {
-    const payload = { ...form }
+    const payload = { type: form.type, number: form.number, fileUrl: form.fileUrl }
     if (editingId.value) {
       await agriApi.updateQualification(editingId.value, payload)
       ElMessage.success('更新成功')
@@ -132,10 +155,29 @@
     load()
   }
 
-  const audit = async (row: any, status: number) => {
-    await agriApi.auditQualification(row.id, { status })
+  const audit = async (row: any, status: number, remark?: string) => {
+    await agriApi.auditQualification(row.id, { status, remark })
     ElMessage.success('审核完成')
     load()
+  }
+
+  const rejectDialogVisible = ref(false)
+  const rejectRemark = ref('')
+  const rejectingRow = ref<any>(null)
+
+  const openRejectDialog = (row: any) => {
+    rejectingRow.value = row
+    rejectRemark.value = ''
+    rejectDialogVisible.value = true
+  }
+
+  const submitReject = async () => {
+    if (!rejectRemark.value.trim()) {
+      ElMessage.warning('请填写驳回原因')
+      return
+    }
+    await audit(rejectingRow.value, 3, rejectRemark.value.trim())
+    rejectDialogVisible.value = false
   }
 
   onMounted(load)

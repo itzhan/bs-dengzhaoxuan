@@ -14,19 +14,24 @@
       <ElTable :data="records" border style="width: 100%">
         <ElTableColumn prop="id" label="ID" width="80" />
         <ElTableColumn prop="orderId" label="订单ID" width="100" />
-        <ElTableColumn prop="buyerId" label="采购方" width="100" />
-        <ElTableColumn prop="sellerId" label="生产方" width="100" />
+        <ElTableColumn prop="buyerId" label="采购方" width="100">
+          <template #default="{ row }">{{ userMap[row.buyerId] || row.buyerId }}</template>
+        </ElTableColumn>
+        <ElTableColumn prop="sellerId" label="生产方" width="100">
+          <template #default="{ row }">{{ userMap[row.sellerId] || row.sellerId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="type" label="类型" width="110">
           <template #default="{ row }">{{ row.type === 1 ? '仅退款' : '退货退款' }}</template>
         </ElTableColumn>
         <ElTableColumn prop="amount" label="金额" width="100" />
+        <ElTableColumn prop="reason" label="原因" />
         <ElTableColumn prop="status" label="状态" width="90">
           <template #default="{ row }">{{ statusText(row.status) }}</template>
         </ElTableColumn>
         <ElTableColumn label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <ElButton size="small" type="success" @click="audit(row, 2)">通过</ElButton>
-            <ElButton size="small" type="danger" @click="audit(row, 3)">驳回</ElButton>
+            <ElButton size="small" type="danger" @click="openRejectDialog(row)">驳回</ElButton>
           </template>
         </ElTableColumn>
       </ElTable>
@@ -43,55 +48,90 @@
         />
       </div>
     </ElCard>
+
+    <ElDialog v-model="rejectDialogVisible" title="驳回原因" width="420px">
+      <ElForm label-width="80px">
+        <ElFormItem label="驳回原因">
+          <ElInput v-model="rejectRemark" type="textarea" rows="3" placeholder="请填写驳回原因（必填）" />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="rejectDialogVisible = false">取消</ElButton>
+        <ElButton type="danger" @click="submitReject">确认驳回</ElButton>
+      </template>
+    </ElDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ElMessage } from 'element-plus'
-  import { agriApi } from '@/api/agri'
+import { ElMessage } from 'element-plus'
+import { agriApi } from '@/api/agri'
+import { useLookup } from '../composables/useLookup'
 
-  const query = reactive({
-    page: 1,
-    size: 10,
-    status: undefined as any
-  })
+const { userMap, loadUsers } = useLookup()
+onMounted(() => loadUsers())
 
-  const records = ref<any[]>([])
-  const total = ref(0)
+const query = reactive({
+  page: 1,
+  size: 10,
+  status: undefined as any
+})
 
-  const statusText = (status: number) => {
-    const map: Record<number, string> = { 1: '待审', 2: '通过', 3: '驳回', 4: '完成' }
-    return map[status] || '未知'
+const records = ref<any[]>([])
+const total = ref(0)
+
+const statusText = (status: number) => {
+  const map: Record<number, string> = { 1: '待审', 2: '通过', 3: '驳回', 4: '完成' }
+  return map[status] || '未知'
+}
+
+const load = async () => {
+  const data = await agriApi.getAfterSales(query)
+  records.value = data.records || []
+  total.value = data.total || 0
+}
+
+const reload = () => {
+  query.page = 1
+  load()
+}
+
+const pageChange = (p: number) => {
+  query.page = p
+  load()
+}
+
+const sizeChange = (s: number) => {
+  query.size = s
+  query.page = 1
+  load()
+}
+
+const audit = async (row: any, status: number, remark?: string) => {
+  await agriApi.auditAfterSale(row.id, { status, remark })
+  ElMessage.success('操作成功')
+  load()
+}
+
+const rejectDialogVisible = ref(false)
+const rejectRemark = ref('')
+const rejectingRow = ref<any>(null)
+
+const openRejectDialog = (row: any) => {
+  rejectingRow.value = row
+  rejectRemark.value = ''
+  rejectDialogVisible.value = true
+}
+
+const submitReject = async () => {
+  if (!rejectRemark.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
   }
+  await audit(rejectingRow.value, 3, rejectRemark.value.trim())
+  rejectDialogVisible.value = false
+}
 
-  const load = async () => {
-    const data = await agriApi.getAfterSales(query)
-    records.value = data.records || []
-    total.value = data.total || 0
-  }
-
-  const reload = () => {
-    query.page = 1
-    load()
-  }
-
-  const pageChange = (p: number) => {
-    query.page = p
-    load()
-  }
-
-  const sizeChange = (s: number) => {
-    query.size = s
-    query.page = 1
-    load()
-  }
-
-  const audit = async (row: any, status: number) => {
-    await agriApi.auditAfterSale(row.id, status)
-    ElMessage.success('操作成功')
-    load()
-  }
-
-  onMounted(load)
-  onActivated(load)
+onMounted(load)
+onActivated(load)
 </script>

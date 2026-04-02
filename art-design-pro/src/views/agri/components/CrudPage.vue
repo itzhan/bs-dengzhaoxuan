@@ -66,7 +66,15 @@
 </template>
 
 <script setup lang="ts">
-  import { ElMessage, ElMessageBox } from 'element-plus'
+  import {
+    ElMessage,
+    ElMessageBox,
+    ElInput,
+    ElInputNumber,
+    ElSelect,
+    ElSwitch,
+    ElDatePicker
+  } from 'element-plus'
 
   export interface CrudColumn {
     prop: string
@@ -184,19 +192,19 @@
   const getFieldComponent = (field: CrudField) => {
     switch (field.type) {
       case 'textarea':
-        return 'ElInput'
+        return ElInput
       case 'number':
-        return 'ElInputNumber'
+        return ElInputNumber
       case 'select':
-        return 'ElSelect'
+        return ElSelect
       case 'switch':
-        return 'ElSwitch'
+        return ElSwitch
       case 'date':
-        return 'ElDatePicker'
+        return ElDatePicker
       case 'datetime':
-        return 'ElDatePicker'
+        return ElDatePicker
       default:
-        return 'ElInput'
+        return ElInput
     }
   }
 

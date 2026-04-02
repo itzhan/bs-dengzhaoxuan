@@ -97,8 +97,8 @@ export const agriApi = {
   createAfterSale(data: any) {
     return request.post<void>({ url: '/api/after-sales', params: data })
   },
-  auditAfterSale(id: number, status: number) {
-    return request.post<void>({ url: `/api/after-sales/${id}/audit`, params: { status } })
+  auditAfterSale(id: number, payload: { status: number; remark?: string }) {
+    return request.post<void>({ url: `/api/after-sales/${id}/audit`, params: payload })
   },
 
   getSchedules(params: any) {

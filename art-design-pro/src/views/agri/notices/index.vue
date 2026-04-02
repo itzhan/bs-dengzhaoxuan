@@ -106,14 +106,17 @@
     dialogTitle.value = row ? '编辑公告' : '新增公告'
     editingId.value = row?.id ?? null
     if (row) {
-      Object.assign(form, row)
+      Object.assign(form, {
+        title: row.title ?? '',
+        content: row.content ?? ''
+      })
     } else {
       Object.assign(form, { title: '', content: '' })
     }
   }
 
   const submit = async () => {
-    const payload = { ...form }
+    const payload = { title: form.title, content: form.content }
     if (editingId.value) {
       await agriApi.updateNotice(editingId.value, payload)
       ElMessage.success('更新成功')

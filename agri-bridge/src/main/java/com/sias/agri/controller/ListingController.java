@@ -123,6 +123,7 @@ public class ListingController {
             return ApiResponse.fail(ResultCode.NOT_FOUND);
         }
         listing.setStatus(req.getStatus());
+        listing.setRemark(req.getRemark());
         listingService.updateById(listing);
 
         AuditRecord record = new AuditRecord();

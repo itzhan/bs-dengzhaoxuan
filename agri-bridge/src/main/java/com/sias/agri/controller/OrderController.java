@@ -115,7 +115,8 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/status")
-    public ApiResponse<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public ApiResponse<?> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, Integer> body) {
+        Integer status = body.get("status");
         Order order = orderService.getById(id);
         if (order == null) {
             return ApiResponse.fail(ResultCode.NOT_FOUND);

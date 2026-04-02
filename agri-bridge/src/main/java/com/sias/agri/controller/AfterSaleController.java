@@ -49,7 +49,9 @@ public class AfterSaleController {
     }
 
     @PostMapping("/{id}/audit")
-    public ApiResponse<?> audit(@PathVariable Long id, @RequestParam Integer status) {
+    public ApiResponse<?> audit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        Integer status = body.get("status") instanceof Number ? ((Number) body.get("status")).intValue() : null;
+        String remark = body.get("remark") instanceof String ? (String) body.get("remark") : null;
         AfterSale afterSale = afterSaleService.getById(id);
         if (afterSale == null) {
             return ApiResponse.fail(ResultCode.NOT_FOUND);
@@ -59,6 +61,7 @@ public class AfterSaleController {
             return ApiResponse.fail(ResultCode.FORBIDDEN);
         }
         afterSale.setStatus(status);
+        afterSale.setRemark(remark);
         afterSale.setAuditBy(SecurityUtils.getUserId());
         afterSale.setAuditTime(LocalDateTime.now());
         afterSaleService.updateById(afterSale);

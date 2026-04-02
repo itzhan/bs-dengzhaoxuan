@@ -105,6 +105,16 @@ a {
   border: 1px solid rgba(31, 111, 67, 0.12);
 }
 
+/* 行内列项垂直间距 */
+.arco-row > .arco-col {
+  margin-bottom: 16px;
+}
+
+/* card-surface 内的卡片间距 */
+.card-surface + .card-surface {
+  margin-top: 16px;
+}
+
 .hero {
   padding: 50px 0 10px;
 }
@@ -208,6 +218,10 @@ a {
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(31, 111, 67, 0.12);
+}
+
+.soft-panel + .soft-panel {
+  margin-top: 12px;
 }
 
 .footer {

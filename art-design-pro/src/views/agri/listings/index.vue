@@ -24,13 +24,20 @@
           <template #default="{ row }">{{ row.type === 1 ? '供给' : '求购' }}</template>
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="200" />
+        <ElTableColumn prop="productId" label="商品" width="120">
+          <template #default="{ row }">{{ productMap[row.productId] || row.productId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="quantity" label="数量" width="100" />
-        <ElTableColumn prop="unitId" label="单位" width="80" />
+        <ElTableColumn prop="unitId" label="单位" width="80">
+          <template #default="{ row }">{{ unitMap[row.unitId] || row.unitId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="price" label="价格" width="90" />
         <ElTableColumn prop="status" label="状态" width="90">
           <template #default="{ row }">{{ statusText(row.status) }}</template>
         </ElTableColumn>
-        <ElTableColumn prop="publisherId" label="发布人" width="100" />
+        <ElTableColumn prop="publisherId" label="发布人" width="100">
+          <template #default="{ row }">{{ userMap[row.publisherId] || row.publisherId }}</template>
+        </ElTableColumn>
         <ElTableColumn label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <ElButton size="small" @click="openDialog(row)">编辑</ElButton>
@@ -40,7 +47,7 @@
               <template #dropdown>
                 <ElDropdownMenu>
                   <ElDropdownItem @click="audit(row, 2)">通过</ElDropdownItem>
-                  <ElDropdownItem @click="audit(row, 3)">驳回</ElDropdownItem>
+                  <ElDropdownItem @click="openRejectDialog(row)">驳回</ElDropdownItem>
                 </ElDropdownMenu>
               </template>
             </ElDropdown>
@@ -70,16 +77,38 @@
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="标题"><ElInput v-model="form.title" /></ElFormItem>
-        <ElFormItem label="商品ID"><ElInput v-model="form.productId" /></ElFormItem>
+        <ElFormItem label="商品">
+          <ElSelect v-model="form.productId" placeholder="请选择商品" filterable>
+            <ElOption v-for="opt in productOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </ElSelect>
+        </ElFormItem>
         <ElFormItem label="数量"><ElInputNumber v-model="form.quantity" /></ElFormItem>
-        <ElFormItem label="单位ID"><ElInput v-model="form.unitId" /></ElFormItem>
+        <ElFormItem label="单位">
+          <ElSelect v-model="form.unitId" placeholder="请选择单位">
+            <ElOption v-for="opt in unitOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </ElSelect>
+        </ElFormItem>
         <ElFormItem label="价格"><ElInputNumber v-model="form.price" /></ElFormItem>
         <ElFormItem label="地点"><ElInput v-model="form.location" /></ElFormItem>
+        <ElFormItem v-if="form.type === 2" label="联系人"><ElInput v-model="form.contactName" /></ElFormItem>
+        <ElFormItem v-if="form.type === 2" label="联系电话"><ElInput v-model="form.contactPhone" /></ElFormItem>
         <ElFormItem label="描述"><ElInput v-model="form.description" type="textarea" rows="3" /></ElFormItem>
       </ElForm>
       <template #footer>
         <ElButton @click="dialogVisible = false">取消</ElButton>
         <ElButton type="primary" @click="submit">保存</ElButton>
+      </template>
+    </ElDialog>
+
+    <ElDialog v-model="rejectDialogVisible" title="驳回原因" width="420px">
+      <ElForm label-width="80px">
+        <ElFormItem label="驳回原因">
+          <ElInput v-model="rejectRemark" type="textarea" rows="3" placeholder="请填写驳回原因（必填）" />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="rejectDialogVisible = false">取消</ElButton>
+        <ElButton type="danger" @click="submitReject">确认驳回</ElButton>
       </template>
     </ElDialog>
   </div>
@@ -89,9 +118,13 @@
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { agriApi } from '@/api/agri'
   import { useUserStore } from '@/store/modules/user'
+  import { useLookup } from '../composables/useLookup'
 
   const userStore = useUserStore()
   const isAdmin = computed(() => userStore.info?.roles?.includes('R_ADMIN'))
+
+  const { productMap, unitMap, userMap, productOptions, unitOptions, loadProducts, loadUnits, loadUsers } = useLookup()
+  onMounted(() => Promise.all([loadProducts(), loadUnits(), loadUsers()]))
 
   const query = reactive({
     page: 1,
@@ -116,6 +149,8 @@
     unitId: undefined,
     price: 0,
     location: '',
+    contactName: '',
+    contactPhone: '',
     description: ''
   })
 
@@ -151,7 +186,18 @@
     dialogTitle.value = row ? '编辑' : '新增'
     editingId.value = row?.id ?? null
     if (row) {
-      Object.assign(form, row)
+      Object.assign(form, {
+        type: row.type ?? 1,
+        title: row.title ?? '',
+        productId: row.productId,
+        quantity: row.quantity ?? 0,
+        unitId: row.unitId,
+        price: row.price ?? 0,
+        location: row.location ?? '',
+        contactName: row.contactName ?? '',
+        contactPhone: row.contactPhone ?? '',
+        description: row.description ?? ''
+      })
     } else {
       Object.assign(form, {
         type: 1,
@@ -161,13 +207,28 @@
         unitId: undefined,
         price: 0,
         location: '',
+        contactName: '',
+        contactPhone: '',
         description: ''
       })
     }
   }
 
   const submit = async () => {
-    const payload = { ...form }
+    const payload: any = {
+      type: form.type,
+      title: form.title,
+      productId: form.productId,
+      quantity: form.quantity,
+      unitId: form.unitId,
+      price: form.price,
+      location: form.location,
+      description: form.description
+    }
+    if (form.type === 2) {
+      payload.contactName = form.contactName
+      payload.contactPhone = form.contactPhone
+    }
     if (editingId.value) {
       await agriApi.updateListing(editingId.value, payload)
       ElMessage.success('更新成功')
@@ -186,10 +247,29 @@
     load()
   }
 
-  const audit = async (row: any, status: number) => {
-    await agriApi.auditListing(row.id, { status })
+  const audit = async (row: any, status: number, remark?: string) => {
+    await agriApi.auditListing(row.id, { status, remark })
     ElMessage.success('审核完成')
     load()
+  }
+
+  const rejectDialogVisible = ref(false)
+  const rejectRemark = ref('')
+  const rejectingRow = ref<any>(null)
+
+  const openRejectDialog = (row: any) => {
+    rejectingRow.value = row
+    rejectRemark.value = ''
+    rejectDialogVisible.value = true
+  }
+
+  const submitReject = async () => {
+    if (!rejectRemark.value.trim()) {
+      ElMessage.warning('请填写驳回原因')
+      return
+    }
+    await audit(rejectingRow.value, 3, rejectRemark.value.trim())
+    rejectDialogVisible.value = false
   }
 
   onMounted(load)

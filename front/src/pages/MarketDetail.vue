@@ -9,6 +9,9 @@ const error = ref('')
 const detail = ref(null)
 const unitMap = ref({})
 
+const CART_KEY = 'agri_cart'
+const FAVORITES_KEY = 'agri_favorites'
+
 const statusMap = {
   1: '待审',
   2: '审核通过',
@@ -25,6 +28,65 @@ const typeLabel = computed(() => {
 
 const formatUnit = (unitId) => unitMap.value[unitId] || '单位'
 const formatDateTime = (val) => (val ? String(val).replace('T', ' ') : '')
+
+const isFavorited = ref(false)
+
+const checkFavorite = () => {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY)
+    const favs = raw ? JSON.parse(raw) : []
+    isFavorited.value = favs.some((f) => f.id === detail.value?.id)
+  } catch {
+    isFavorited.value = false
+  }
+}
+
+const toggleFavorite = () => {
+  if (!detail.value) return
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY)
+    let favs = raw ? JSON.parse(raw) : []
+    const idx = favs.findIndex((f) => f.id === detail.value.id)
+    if (idx >= 0) {
+      favs.splice(idx, 1)
+      isFavorited.value = false
+    } else {
+      favs.push({
+        id: detail.value.id,
+        title: detail.value.title,
+        location: detail.value.location,
+        price: detail.value.price,
+        type: detail.value.type
+      })
+      isFavorited.value = true
+    }
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs))
+  } catch {}
+}
+
+const addToCart = () => {
+  if (!detail.value) return
+  try {
+    const raw = localStorage.getItem(CART_KEY)
+    let cart = raw ? JSON.parse(raw) : []
+    const existing = cart.find((c) => c.productId === detail.value.productId && c.listingId === detail.value.id)
+    if (existing) {
+      existing.qty += 1
+    } else {
+      cart.push({
+        listingId: detail.value.id,
+        productId: detail.value.productId,
+        productName: detail.value.title,
+        price: detail.value.price || 0,
+        unitId: detail.value.unitId,
+        sellerId: detail.value.publisherId,
+        qty: 1
+      })
+    }
+    localStorage.setItem(CART_KEY, JSON.stringify(cart))
+    window.$message?.success?.('已加入购物车') || alert('已加入购物车')
+  } catch {}
+}
 
 const metaRows = computed(() => {
   if (!detail.value) return []
@@ -57,6 +119,7 @@ const loadData = async () => {
       acc[unit.id] = unit.symbol || unit.name
       return acc
     }, {})
+    checkFavorite()
   } catch (err) {
     error.value = err?.message || '详情加载失败'
   } finally {
@@ -77,7 +140,17 @@ onMounted(loadData)
         </div>
       </template>
       <template #extra>
-        <a-button type="primary" @click="$router.push('/market')">返回供需大厅</a-button>
+        <div style="display: flex; gap: 8px;">
+          <a-button v-if="detail && detail.type === 1" type="primary" @click="addToCart">
+            <template #icon><icon-shopping-cart /></template>
+            加入购物车
+          </a-button>
+          <a-button @click="toggleFavorite" :type="isFavorited ? 'primary' : 'secondary'" :status="isFavorited ? 'warning' : undefined">
+            <template #icon><icon-heart-fill v-if="isFavorited" /><icon-heart v-else /></template>
+            {{ isFavorited ? '已收藏' : '收藏' }}
+          </a-button>
+          <a-button @click="$router.push('/market')">返回供需大厅</a-button>
+        </div>
       </template>
 
       <a-alert v-if="error" type="warning" :title="error" show-icon style="margin-bottom: 16px;" />

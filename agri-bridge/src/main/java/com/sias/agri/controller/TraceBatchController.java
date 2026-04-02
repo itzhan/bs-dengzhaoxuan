@@ -31,8 +31,12 @@ public class TraceBatchController {
         if (producerId != null) {
             wrapper.eq(TraceBatch::getProducerId, producerId);
         }
-        if (!"ADMIN".equals(SecurityUtils.getRole()) && producerId == null) {
-            wrapper.eq(TraceBatch::getProducerId, SecurityUtils.getUserId());
+        // 按 productId 查询时溯源信息公开可见；仅管理自己的溯源列表时按生产者过滤
+        if (productId == null && producerId == null) {
+            Long currentUserId = SecurityUtils.getUserId();
+            if (currentUserId != null && !"ADMIN".equals(SecurityUtils.getRole())) {
+                wrapper.eq(TraceBatch::getProducerId, currentUserId);
+            }
         }
         Page<TraceBatch> result = traceBatchService.page(new Page<>(page, size), wrapper);
         return ApiResponse.ok(PageResult.of(result));

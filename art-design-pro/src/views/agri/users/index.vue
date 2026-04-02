@@ -10,46 +10,20 @@
     { prop: 'id', label: 'ID', width: 80 },
     { prop: 'username', label: '用户名', width: 140 },
     { prop: 'realName', label: '姓名', width: 120 },
-    {
-      prop: 'role',
-      label: '角色',
-      width: 100,
-      formatter: (row) => ({ 1: '管理员', 2: '生产方', 3: '采购方' }[row.role] || row.role)
-    },
-    {
-      prop: 'status',
-      label: '状态',
-      width: 80,
-      formatter: (row) => (row.status === 1 ? '启用' : '禁用')
-    },
+    { prop: 'role', label: '角色', width: 100, formatter: (row) => ({ 1: '管理员', 2: '生产方', 3: '采购方' }[row.role] || row.role) as string },
+    { prop: 'gender', label: '性别', width: 80, formatter: (row) => ({ 1: '男', 2: '女' }[row.gender] || '未知') as string },
+    { prop: 'status', label: '状态', width: 80, formatter: (row) => (row.status === 1 ? '启用' : '禁用') },
+    { prop: 'address', label: '地址' },
     { prop: 'createdAt', label: '创建时间', width: 160 }
   ]
 
   const fields: CrudField[] = [
     { prop: 'username', label: '用户名' },
     { prop: 'password', label: '密码' },
-    {
-      prop: 'role',
-      label: '角色',
-      type: 'select',
-      options: [
-        { label: '管理员', value: 1 },
-        { label: '生产方', value: 2 },
-        { label: '采购方', value: 3 }
-      ]
-    },
-    {
-      prop: 'status',
-      label: '状态',
-      type: 'select',
-      defaultValue: 1,
-      options: [
-        { label: '启用', value: 1 },
-        { label: '禁用', value: 2 }
-      ]
-    },
+    { prop: 'role', label: '角色', type: 'select', options: [{ label: '管理员', value: 1 }, { label: '生产方', value: 2 }, { label: '采购方', value: 3 }] },
+    { prop: 'status', label: '状态', type: 'select', defaultValue: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 2 }] },
     { prop: 'realName', label: '姓名' },
-    { prop: 'gender', label: '性别', type: 'number' },
+    { prop: 'gender', label: '性别', type: 'select', options: [{ label: '男', value: 1 }, { label: '女', value: 2 }] },
     { prop: 'address', label: '地址' }
   ]
 

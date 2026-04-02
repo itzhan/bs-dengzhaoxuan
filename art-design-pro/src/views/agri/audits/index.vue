@@ -19,7 +19,9 @@
           <template #default="{ row }">{{ row.status === 1 ? '通过' : '驳回' }}</template>
         </ElTableColumn>
         <ElTableColumn prop="remark" label="备注" />
-        <ElTableColumn prop="auditorId" label="审核人" width="100" />
+        <ElTableColumn prop="auditorId" label="审核人" width="120">
+          <template #default="{ row }">{{ userMap[row.auditorId] || row.auditorId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="auditTime" label="时间" width="160" />
       </ElTable>
 
@@ -40,6 +42,10 @@
 
 <script setup lang="ts">
   import { agriApi } from '@/api/agri'
+  import { useLookup } from '../composables/useLookup'
+
+  const { userMap, loadUsers } = useLookup()
+  onMounted(() => loadUsers())
 
   const query = reactive({
     page: 1,

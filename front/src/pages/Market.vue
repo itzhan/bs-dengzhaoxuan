@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchListings, fetchUnits } from '../api'
+import { fetchListings, fetchUnits, fetchTraceByBatch, fetchTraces } from '../api'
+
+const FAVORITES_KEY = 'agri_favorites'
 
 const activeTab = ref('supply')
 const keyword = ref('')
@@ -12,6 +14,8 @@ const error = ref('')
 const supplyList = ref([])
 const demandList = ref([])
 const unitMap = ref({})
+// 收藏响应式版本号
+const favVersion = ref(0)
 
 const toText = (val) => (typeof val === 'string' ? val : val == null ? '' : String(val))
 
@@ -94,6 +98,79 @@ const loadData = async () => {
   }
 }
 
+const isFavorited = (itemId) => {
+  // 依赖 favVersion 确保响应式更新
+  void favVersion.value
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY)
+    const favs = raw ? JSON.parse(raw) : []
+    return favs.some((f) => f.id === itemId)
+  } catch {
+    return false
+  }
+}
+
+const toggleFavorite = (item) => {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY)
+    let favs = raw ? JSON.parse(raw) : []
+    const idx = favs.findIndex((f) => f.id === item.id)
+    if (idx >= 0) {
+      favs.splice(idx, 1)
+    } else {
+      favs.push({ id: item.id, title: item.title, location: item.location, price: item.price, type: item.type })
+    }
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs))
+    favVersion.value++
+  } catch {}
+}
+
+// 溯源弹窗
+const traceVisible = ref(false)
+const traceLoading = ref(false)
+const traceData = ref(null)
+const traceError = ref('')
+
+const traceInfoLabels = {
+  farm: '产地/农场', pesticide: '农药使用', fertilizer: '肥料', irrigation: '灌溉方式',
+  soil: '土壤类型', variety: '品种', origin: '产地', method: '种植方式',
+  certification: '认证', storage: '储存方式', transport: '运输方式', temperature: '温控',
+  inspector: '质检员', result: '检测结果', weight: '重量', grade: '等级'
+}
+
+const parsedTraceInfo = computed(() => {
+  if (!traceData.value?.traceInfo) return null
+  try {
+    const obj = typeof traceData.value.traceInfo === 'string'
+      ? JSON.parse(traceData.value.traceInfo) : traceData.value.traceInfo
+    if (typeof obj !== 'object' || obj === null) return null
+    return Object.entries(obj).map(([key, value]) => ({
+      label: traceInfoLabels[key] || key,
+      value: String(value)
+    }))
+  } catch { return null }
+})
+
+const showTrace = async (item) => {
+  traceVisible.value = true
+  traceLoading.value = true
+  traceData.value = null
+  traceError.value = ''
+  try {
+    const traces = await fetchTraces({ productId: item.productId, page: 1, size: 1 })
+    const records = traces?.records || []
+    if (records.length && records[0].batchNo) {
+      traceData.value = await fetchTraceByBatch(records[0].batchNo)
+    } else {
+      traceError.value = '该商品暂无溯源记录'
+    }
+  } catch {
+    traceError.value = '溯源信息查询失败'
+  } finally {
+    traceLoading.value = false
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -146,7 +223,11 @@ onMounted(loadData)
                 </div>
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
                   <a-button type="primary" @click="$router.push(`/market/supply/${item.id}`)">查看详情</a-button>
-                  <a-button @click="$router.push('/trace')">查看溯源</a-button>
+                  <a-button @click="toggleFavorite(item)">
+                    <template #icon><icon-heart-fill v-if="isFavorited(item.id)" /><icon-heart v-else /></template>
+                    {{ isFavorited(item.id) ? '已收藏' : '收藏' }}
+                  </a-button>
+                  <a-button @click="showTrace(item)">查看溯源</a-button>
                 </div>
               </a-card>
             </a-col>
@@ -169,7 +250,6 @@ onMounted(loadData)
                 </div>
                 <div style="margin-top: 12px; display: flex; gap: 8px;">
                   <a-button type="primary" @click="$router.push(`/market/demand/${item.id}`)">查看详情</a-button>
-                  <a-button @click="$router.push('/market')">对接咨询</a-button>
                 </div>
               </a-card>
             </a-col>
@@ -178,5 +258,29 @@ onMounted(loadData)
         </a-spin>
       </a-tab-pane>
     </a-tabs>
+
+    <!-- 溯源弹窗 -->
+    <a-modal v-model:visible="traceVisible" title="溯源信息" :footer="false" width="520px">
+      <a-spin :loading="traceLoading" style="width: 100%;">
+        <a-alert v-if="traceError" type="warning" :title="traceError" show-icon />
+        <template v-if="traceData">
+          <a-descriptions :column="1" bordered size="small" style="margin-bottom: 16px;">
+            <a-descriptions-item label="批次编号">{{ traceData.batchNo }}</a-descriptions-item>
+            <a-descriptions-item label="生产日期">{{ traceData.productionDate || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="采收日期">{{ traceData.harvestDate || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="保质期至">{{ traceData.expiryDate || '—' }}</a-descriptions-item>
+          </a-descriptions>
+          <template v-if="parsedTraceInfo">
+            <div style="font-weight: 600; margin-bottom: 8px;">溯源详情</div>
+            <a-descriptions :column="1" bordered size="small">
+              <a-descriptions-item v-for="info in parsedTraceInfo" :key="info.label" :label="info.label">
+                {{ info.value }}
+              </a-descriptions-item>
+            </a-descriptions>
+          </template>
+          <div v-else-if="traceData.traceInfo" class="card-desc" style="margin-top: 8px;">{{ traceData.traceInfo }}</div>
+        </template>
+      </a-spin>
+    </a-modal>
   </section>
 </template>

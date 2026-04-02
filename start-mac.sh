@@ -173,7 +173,8 @@ echo -e "  ✓ 后端启动中... (PID: ${GREEN}${BACKEND_PID}${NC})"
 # 等待后端就绪
 echo -ne "  ⏳ 等待后端就绪"
 for i in $(seq 1 60); do
-    if curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/login 2>/dev/null | grep -qE '(200|401|405|400)'; then
+    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/login 2>/dev/null)
+    if [ "$HTTP_CODE" != "000" ] && [ -n "$HTTP_CODE" ]; then
         echo ""
         echo -e "  ✓ 后端 ${GREEN}已就绪${NC} (http://localhost:8080)"
         break

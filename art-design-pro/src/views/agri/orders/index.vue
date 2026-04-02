@@ -18,8 +18,12 @@
       <ElTable :data="records" border style="width: 100%">
         <ElTableColumn prop="id" label="ID" width="80" />
         <ElTableColumn prop="orderNo" label="订单号" width="180" />
-        <ElTableColumn prop="buyerId" label="采购方" width="100" />
-        <ElTableColumn prop="sellerId" label="生产方" width="100" />
+        <ElTableColumn prop="buyerId" label="采购方" width="100">
+          <template #default="{ row }">{{ userMap[row.buyerId] || row.buyerId }}</template>
+        </ElTableColumn>
+        <ElTableColumn prop="sellerId" label="生产方" width="100">
+          <template #default="{ row }">{{ userMap[row.sellerId] || row.sellerId }}</template>
+        </ElTableColumn>
         <ElTableColumn prop="totalAmount" label="总金额" width="100" />
         <ElTableColumn prop="totalQuantity" label="总数量" width="100" />
         <ElTableColumn prop="status" label="状态" width="100">
@@ -62,8 +66,8 @@
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="订单号">{{ detail?.order?.orderNo }}</ElDescriptionsItem>
         <ElDescriptionsItem label="状态">{{ statusText(detail?.order?.status) }}</ElDescriptionsItem>
-        <ElDescriptionsItem label="采购方">{{ detail?.order?.buyerId }}</ElDescriptionsItem>
-        <ElDescriptionsItem label="生产方">{{ detail?.order?.sellerId }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="采购方">{{ userMap[detail?.order?.buyerId] || detail?.order?.buyerId }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="生产方">{{ userMap[detail?.order?.sellerId] || detail?.order?.sellerId }}</ElDescriptionsItem>
         <ElDescriptionsItem label="总金额">{{ detail?.order?.totalAmount }}</ElDescriptionsItem>
         <ElDescriptionsItem label="总数量">{{ detail?.order?.totalQuantity }}</ElDescriptionsItem>
         <ElDescriptionsItem label="收货地址" :span="2">{{ detail?.order?.deliveryAddress }}</ElDescriptionsItem>
@@ -83,6 +87,10 @@
 <script setup lang="ts">
   import { ElMessage } from 'element-plus'
   import { agriApi } from '@/api/agri'
+  import { useLookup } from '../composables/useLookup'
+
+  const { userMap, loadUsers } = useLookup()
+  onMounted(() => loadUsers())
 
   const query = reactive({
     page: 1,

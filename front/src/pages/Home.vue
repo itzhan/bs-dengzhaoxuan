@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { coreFlow, platformHighlights, quickInsights } from '../data/home'
-import { fetchListings, fetchNotices, fetchStatsOverview, fetchUnits } from '../api'
+import { fetchListings, fetchNotices, fetchRecommend, fetchStatsOverview, fetchUnits } from '../api'
 
 const loading = ref(true)
 const error = ref('')
@@ -10,6 +10,7 @@ const supplyList = ref([])
 const demandList = ref([])
 const notices = ref([])
 const unitMap = ref({})
+const recommendList = ref([])
 
 const heroStats = computed(() => [
   { label: '平台注册用户', value: stats.value.userCount ?? 0, unit: '人' },
@@ -41,6 +42,11 @@ const loadData = async () => {
       acc[unit.id] = unit.symbol || unit.name
       return acc
     }, {})
+    // 加载推荐商品
+    try {
+      const recData = await fetchRecommend(6)
+      recommendList.value = recData || []
+    } catch {}
   } catch (err) {
     error.value = err?.message || '数据加载失败'
   } finally {
@@ -79,6 +85,20 @@ onMounted(loadData)
 
   <section class="section">
     <a-alert v-if="error" type="warning" :title="error" show-icon />
+  </section>
+
+  <section class="section" v-if="recommendList.length">
+    <h2 class="section-title">为您推荐</h2>
+    <p class="section-subtitle">基于协同过滤算法，根据订单数据智能推荐您可能感兴趣的商品。</p>
+    <a-row :gutter="20">
+      <a-col v-for="item in recommendList" :key="item.id" :xs="12" :md="8">
+        <div class="soft-panel" style="height: 100%;">
+          <div class="card-title">{{ item.name }}</div>
+          <div class="card-desc">{{ item.origin || '产地未知' }} · {{ item.description || '' }}</div>
+          <a-tag color="green" style="margin-top: 8px;">{{ item.traceable ? '可溯源' : '普通商品' }}</a-tag>
+        </div>
+      </a-col>
+    </a-row>
   </section>
 
   <section class="section">

@@ -73,11 +73,16 @@ onMounted(() => {
 
       <div class="nav-actions">
         <a-button type="primary" class="call-btn" @click="router.push('/publish')">发布信息</a-button>
-        <a-button class="ghost-btn" @click="router.push('/trace')">溯源查询</a-button>
+        <a-button class="ghost-btn" @click="router.push('/cart')">
+          <template #icon><icon-shopping-cart /></template>
+          购物车
+        </a-button>
         <template v-if="user">
           <a-dropdown>
             <a-button class="ghost-btn">{{ user.username }}</a-button>
             <template #content>
+              <a-doption @click="router.push('/profile')">个人中心</a-doption>
+              <a-doption @click="router.push('/orders')">我的订单</a-doption>
               <a-doption @click="router.push('/publish')">我的发布</a-doption>
               <a-doption @click="handleLogout">退出登录</a-doption>
             </template>

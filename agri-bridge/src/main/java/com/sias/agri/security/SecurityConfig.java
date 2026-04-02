@@ -36,15 +36,17 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health").permitAll()
+                        .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/listings/**",
                                 "/api/notices/**",
                                 "/api/stats/**",
-                                "/api/traces/by-batch/**",
+                                "/api/traces/**",
                                 "/api/units/**",
                                 "/api/categories/**",
                                 "/api/products/**",
-                                "/api/support/**"
+                                "/api/support/**",
+                                "/api/recommend/**"
                         ).permitAll()
                         .anyRequest().authenticated());
 

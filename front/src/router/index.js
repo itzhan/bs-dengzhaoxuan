@@ -10,6 +10,9 @@ import About from '../pages/About.vue'
 import Login from '../pages/Login.vue'
 import Register from '../pages/Register.vue'
 import Publish from '../pages/Publish.vue'
+import Cart from '../pages/Cart.vue'
+import Profile from '../pages/Profile.vue'
+import MyOrders from '../pages/MyOrders.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,7 +26,10 @@ const router = createRouter({
     { path: '/about', name: 'about', component: About },
     { path: '/login', name: 'login', component: Login },
     { path: '/register', name: 'register', component: Register },
-    { path: '/publish', name: 'publish', component: Publish }
+    { path: '/publish', name: 'publish', component: Publish },
+    { path: '/cart', name: 'cart', component: Cart },
+    { path: '/profile', name: 'profile', component: Profile },
+    { path: '/orders', name: 'orders', component: MyOrders }
   ],
   scrollBehavior() {
     return { top: 0 }
@@ -31,3 +37,4 @@ const router = createRouter({
 })
 
 export default router
+

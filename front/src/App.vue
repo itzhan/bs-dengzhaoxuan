@@ -12,7 +12,9 @@ import SupportWidget from './components/SupportWidget.vue'
       <main class="page-wrap">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" :key="route.fullPath" />
+            <div :key="route.fullPath">
+              <component :is="Component" />
+            </div>
           </transition>
         </router-view>
       </main>

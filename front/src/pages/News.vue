@@ -39,14 +39,10 @@ onMounted(loadData)
     <a-alert v-if="error" type="warning" :title="error" show-icon style="margin-bottom: 16px;" />
 
     <div class="card-surface" style="padding: 18px; margin-bottom: 20px;">
-      <a-row :gutter="16" align="center">
-        <a-col :xs="24" :md="16">
-          <a-input v-model="keyword" allow-clear placeholder="搜索公告标题" />
-        </a-col>
-        <a-col :xs="24" :md="8" style="display: flex; gap: 10px;">
-          <a-button type="primary" @click="keyword = ''">清空搜索</a-button>
-        </a-col>
-      </a-row>
+      <div style="display: flex; justify-content: center; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <a-input v-model="keyword" allow-clear placeholder="搜索公告标题" style="max-width: 480px; flex: 1;" />
+        <a-button type="primary" @click="keyword = ''">清空搜索</a-button>
+      </div>
     </div>
 
     <a-spin :loading="loading" style="width: 100%;">

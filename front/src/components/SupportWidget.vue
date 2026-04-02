@@ -1,6 +1,6 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { fetchConversationMessages, fetchConversations, fetchSupportAgent, login, sendMessage } from '../api'
+import { askAi, fetchConversationMessages, fetchConversations, fetchSupportAgent, login, sendMessage } from '../api'
 import { getUser, setAuth } from '../utils/auth'
 
 const visible = ref(false)
@@ -15,6 +15,15 @@ const historyLoading = ref(false)
 const messageText = ref('')
 const messagesRef = ref(null)
 let pollTimer = null
+
+// AI 客服状态
+const aiMode = ref(false)
+const aiMessages = ref([
+  { role: 'ai', content: '您好！我是智能客服助手，可以回答关于注册登录、采购下单、供应发布、溯源查询、售后处理等问题。请问有什么可以帮您？' }
+])
+const aiInput = ref('')
+const aiLoading = ref(false)
+const aiMessagesRef = ref(null)
 
 const loginLoading = ref(false)
 const loginError = ref('')
@@ -101,6 +110,25 @@ const handleSend = async () => {
     error.value = err?.message || '发送失败'
   } finally {
     loading.value = false
+  }
+}
+
+const handleAiSend = async () => {
+  const q = aiInput.value.trim()
+  if (!q) return
+  aiMessages.value.push({ role: 'user', content: q })
+  aiInput.value = ''
+  aiLoading.value = true
+  try {
+    const res = await askAi(q)
+    aiMessages.value.push({ role: 'ai', content: res?.answer || '抱歉，暂时无法回答。' })
+  } catch {
+    aiMessages.value.push({ role: 'ai', content: '网络错误，请稍后重试。' })
+  } finally {
+    aiLoading.value = false
+    nextTick(() => {
+      if (aiMessagesRef.value) aiMessagesRef.value.scrollTop = aiMessagesRef.value.scrollHeight
+    })
   }
 }
 
@@ -192,9 +220,12 @@ onBeforeUnmount(() => {
     <transition name="float-fade">
       <div v-if="visible" class="support-float">
         <div class="support-header">
-          <div class="support-title">在线客服</div>
+          <div class="support-title">{{ aiMode ? 'AI 智能客服' : '在线客服' }}</div>
           <div class="support-actions">
-            <a-button size="mini" @click="loadConversation">刷新</a-button>
+            <a-button size="mini" :type="aiMode ? 'primary' : 'secondary'" @click="aiMode = !aiMode">
+              {{ aiMode ? '人工客服' : 'AI客服' }}
+            </a-button>
+            <a-button v-if="!aiMode" size="mini" @click="loadConversation">刷新</a-button>
             <a-button size="mini" type="text" @click="visible = false">
               <icon-close />
             </a-button>
@@ -202,6 +233,27 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="support-body">
+          <!-- AI 智能客服模式 -->
+          <template v-if="aiMode">
+            <div class="support-hint">基于关键词匹配的智能问答系统，可回答平台常见问题。</div>
+            <div class="chat-box">
+              <div class="chat-messages" ref="aiMessagesRef">
+                <div v-for="(msg, idx) in aiMessages" :key="idx" class="chat-row" :class="{ 'chat-row-self': msg.role === 'user' }">
+                  <div class="chat-bubble">
+                    <div class="chat-content" style="white-space: pre-line;">{{ msg.content }}</div>
+                  </div>
+                </div>
+                <div v-if="aiLoading" class="chat-loading">正在思考...</div>
+              </div>
+              <div class="chat-input">
+                <a-textarea v-model="aiInput" :rows="2" placeholder="输入问题，如“怎么下单”“溯源查询”" @keydown.enter.prevent="handleAiSend" />
+                <a-button type="primary" :loading="aiLoading" @click="handleAiSend">发送</a-button>
+              </div>
+            </div>
+          </template>
+
+          <!-- 人工客服模式 -->
+          <template v-else>
           <div class="support-hint">点击发送即可留言，客服会在管理端回复。</div>
           <a-alert v-if="error" type="warning" :title="error" show-icon style="margin-bottom: 8px;" />
           <a-alert v-if="success" type="success" :title="success" show-icon style="margin-bottom: 8px;" />
@@ -224,6 +276,9 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="chat-input">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; grid-column: 1 / -1;">
+                <a-button v-for="text in ['已发货', '价格已确认', '可以配送', '请提供资质', '订单已处理']" :key="text" size="mini" @click="messageText = text">{{ text }}</a-button>
+              </div>
               <a-textarea v-model="messageText" :rows="2" placeholder="请输入留言内容" />
               <a-button type="primary" :loading="loading" @click="handleSend">发送</a-button>
             </div>
@@ -236,6 +291,7 @@ onBeforeUnmount(() => {
             <a-input-password v-model="loginForm.password" placeholder="请输入密码" />
             <a-button type="primary" long :loading="loginLoading" @click="handleLogin">登录</a-button>
           </div>
+          </template>
         </div>
       </div>
     </transition>
