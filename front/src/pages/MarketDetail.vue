@@ -1,13 +1,20 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchListingById, fetchUnits } from '../api'
+import { fetchListingById, fetchUnits, fetchProducts } from '../api'
+import { productFallbackImage } from '../utils/productImage'
 
 const route = useRoute()
 const loading = ref(true)
 const error = ref('')
 const detail = ref(null)
 const unitMap = ref({})
+const product = ref(null)
+
+const heroImage = () => {
+  if (product.value?.imageUrl) return product.value.imageUrl
+  return productFallbackImage(detail.value?.title || product.value?.name || '农产品')
+}
 
 const CART_KEY = 'agri_cart'
 const FAVORITES_KEY = 'agri_favorites'
@@ -119,6 +126,12 @@ const loadData = async () => {
       acc[unit.id] = unit.symbol || unit.name
       return acc
     }, {})
+    if (detailRes?.productId) {
+      try {
+        const prodRes = await fetchProducts({ page: 1, size: 500 })
+        product.value = (prodRes.records || []).find(p => p.id === detailRes.productId) || null
+      } catch {}
+    }
     checkFavorite()
   } catch (err) {
     error.value = err?.message || '详情加载失败'
@@ -157,6 +170,13 @@ onMounted(loadData)
 
       <a-spin :loading="loading" style="width: 100%;">
         <div v-if="detail" style="display: grid; gap: 18px;">
+          <div class="soft-panel" style="padding: 0; overflow: hidden;">
+            <img
+              :src="heroImage()"
+              @error="(e) => (e.target.src = productFallbackImage(detail.title))"
+              style="width: 100%; height: 320px; object-fit: cover; display: block;"
+            />
+          </div>
           <div class="soft-panel">
             <div class="card-title">基础信息</div>
             <a-row :gutter="16" style="margin-top: 12px;">

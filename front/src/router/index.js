@@ -13,6 +13,7 @@ import Publish from '../pages/Publish.vue'
 import Cart from '../pages/Cart.vue'
 import Profile from '../pages/Profile.vue'
 import MyOrders from '../pages/MyOrders.vue'
+import Payment from '../pages/Payment.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,7 +30,8 @@ const router = createRouter({
     { path: '/publish', name: 'publish', component: Publish },
     { path: '/cart', name: 'cart', component: Cart },
     { path: '/profile', name: 'profile', component: Profile },
-    { path: '/orders', name: 'orders', component: MyOrders }
+    { path: '/orders', name: 'orders', component: MyOrders },
+    { path: '/payment/:id', name: 'payment', component: Payment }
   ],
   scrollBehavior() {
     return { top: 0 }

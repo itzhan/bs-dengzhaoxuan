@@ -7,8 +7,10 @@ import com.sias.agri.common.PageResult;
 import com.sias.agri.common.ResultCode;
 import com.sias.agri.dto.OrderCreateRequest;
 import com.sias.agri.dto.OrderItemRequest;
+import com.sias.agri.entity.Inventory;
 import com.sias.agri.entity.Order;
 import com.sias.agri.entity.OrderItem;
+import com.sias.agri.service.InventoryService;
 import com.sias.agri.service.OrderItemService;
 import com.sias.agri.service.OrderService;
 import com.sias.agri.util.SecurityUtils;
@@ -29,10 +31,12 @@ import java.util.Random;
 public class OrderController {
     private final OrderService orderService;
     private final OrderItemService orderItemService;
+    private final InventoryService inventoryService;
 
-    public OrderController(OrderService orderService, OrderItemService orderItemService) {
+    public OrderController(OrderService orderService, OrderItemService orderItemService, InventoryService inventoryService) {
         this.orderService = orderService;
         this.orderItemService = orderItemService;
+        this.inventoryService = inventoryService;
     }
 
     @GetMapping
@@ -91,7 +95,7 @@ public class OrderController {
         order.setOrderNo(generateOrderNo());
         order.setBuyerId(buyerId);
         order.setSellerId(req.getSellerId());
-        order.setStatus(1);
+        order.setStatus(1); // 1 = 待付款
         order.setTotalAmount(totalAmount);
         order.setTotalQuantity(totalQuantity);
         order.setDeliveryAddress(req.getDeliveryAddress());
@@ -128,6 +132,90 @@ public class OrderController {
         }
         order.setStatus(status);
         orderService.updateById(order);
+        return ApiResponse.ok();
+    }
+
+    /** 采购商支付：1 待付款 -> 2 待发货 */
+    @PostMapping("/{id}/pay")
+    public ApiResponse<?> pay(@PathVariable Long id) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return ApiResponse.fail(ResultCode.NOT_FOUND);
+        }
+        Long uid = SecurityUtils.getUserId();
+        boolean isAdmin = "ADMIN".equals(SecurityUtils.getRole());
+        if (!isAdmin && !order.getBuyerId().equals(uid)) {
+            return ApiResponse.fail(ResultCode.FORBIDDEN, "仅采购商可支付订单");
+        }
+        if (order.getStatus() != null && order.getStatus() != 1) {
+            return ApiResponse.fail(ResultCode.BAD_REQUEST, "订单当前状态不支持支付");
+        }
+        order.setStatus(2);
+        orderService.updateById(order);
+        return ApiResponse.ok();
+    }
+
+    /** 生产者发货：2 待发货 -> 3 配送中 */
+    @PostMapping("/{id}/ship")
+    public ApiResponse<?> ship(@PathVariable Long id) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return ApiResponse.fail(ResultCode.NOT_FOUND);
+        }
+        Long uid = SecurityUtils.getUserId();
+        String role = SecurityUtils.getRole();
+        boolean isAdmin = "ADMIN".equals(role);
+        if (!isAdmin && !order.getSellerId().equals(uid)) {
+            return ApiResponse.fail(ResultCode.FORBIDDEN, "仅生产者可发货");
+        }
+        if (order.getStatus() != null && order.getStatus() != 2) {
+            return ApiResponse.fail(ResultCode.BAD_REQUEST, "订单当前状态不支持发货");
+        }
+        order.setStatus(3);
+        orderService.updateById(order);
+        return ApiResponse.ok();
+    }
+
+    /** 采购商确认收货：3/4 -> 5 已完成；同时扣减库存 */
+    @PostMapping("/{id}/confirm")
+    @Transactional
+    public ApiResponse<?> confirmReceipt(@PathVariable Long id) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return ApiResponse.fail(ResultCode.NOT_FOUND);
+        }
+        Long uid = SecurityUtils.getUserId();
+        boolean isAdmin = "ADMIN".equals(SecurityUtils.getRole());
+        if (!isAdmin && !order.getBuyerId().equals(uid)) {
+            return ApiResponse.fail(ResultCode.FORBIDDEN, "仅采购商可确认收货");
+        }
+        Integer st = order.getStatus();
+        if (st == null || (st != 3 && st != 4)) {
+            return ApiResponse.fail(ResultCode.BAD_REQUEST, "订单当前状态不支持确认收货");
+        }
+        order.setStatus(5);
+        orderService.updateById(order);
+
+        // 扣减库存
+        List<OrderItem> items = orderItemService.list(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, id));
+        Long sellerId = order.getSellerId();
+        for (OrderItem item : items) {
+            Inventory inv = inventoryService.getOne(new LambdaQueryWrapper<Inventory>()
+                    .eq(Inventory::getProducerId, sellerId)
+                    .eq(Inventory::getProductId, item.getProductId())
+                    .last("LIMIT 1"));
+            if (inv == null) {
+                continue;
+            }
+            BigDecimal remaining = inv.getQuantity() == null ? BigDecimal.ZERO : inv.getQuantity();
+            BigDecimal after = remaining.subtract(item.getQuantity());
+            if (after.signum() < 0) {
+                after = BigDecimal.ZERO;
+            }
+            inv.setQuantity(after);
+            inventoryService.updateById(inv);
+        }
         return ApiResponse.ok();
     }
 

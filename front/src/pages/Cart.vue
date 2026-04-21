@@ -84,8 +84,9 @@ const handleSubmit = async () => {
   success.value = ''
 
   try {
+    const createdIds = []
     for (const [sellerId, items] of Object.entries(sellerGroups)) {
-      await createOrder({
+      const orderId = await createOrder({
         sellerId: Number(sellerId),
         deliveryAddress: deliveryAddress.value,
         contactName: contactName.value || getUser()?.username || '',
@@ -98,9 +99,16 @@ const handleSubmit = async () => {
           price: item.price || 0
         }))
       })
+      if (orderId) createdIds.push(orderId)
     }
-    success.value = '下单成功！可在「我的订单」查看订单状态'
+    success.value = '下单成功！正在跳转至支付页面…'
     clearCart()
+    if (createdIds.length === 1) {
+      setTimeout(() => router.push(`/payment/${createdIds[0]}`), 600)
+    } else if (createdIds.length > 1) {
+      // 多个卖家生成多笔订单，先跳转第一笔，其余可在我的订单页继续支付
+      setTimeout(() => router.push(`/payment/${createdIds[0]}`), 600)
+    }
   } catch (err) {
     error.value = err?.message || '下单失败'
   } finally {

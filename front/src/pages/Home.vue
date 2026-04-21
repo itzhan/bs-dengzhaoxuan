@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { coreFlow, platformHighlights, quickInsights } from '../data/home'
-import { fetchListings, fetchNotices, fetchRecommend, fetchStatsOverview, fetchUnits } from '../api'
+import { fetchListings, fetchNotices, fetchRecommend, fetchStatsOverview, fetchUnits, fetchProducts } from '../api'
+import { productImageFor, productFallbackImage } from '../utils/productImage'
 
 const loading = ref(true)
 const error = ref('')
@@ -10,7 +11,14 @@ const supplyList = ref([])
 const demandList = ref([])
 const notices = ref([])
 const unitMap = ref({})
+const productMap = ref({})
 const recommendList = ref([])
+
+const imageForListing = (item) => {
+  const prod = productMap.value[item.productId]
+  if (prod?.imageUrl) return prod.imageUrl
+  return productFallbackImage(item.title || prod?.name || '农产品')
+}
 
 const heroStats = computed(() => [
   { label: '平台注册用户', value: stats.value.userCount ?? 0, unit: '人' },
@@ -26,13 +34,16 @@ const loadData = async () => {
   loading.value = true
   error.value = ''
   try {
-    const [statsData, supplyRes, demandRes, noticeRes, unitRes] = await Promise.all([
+    const [statsData, supplyRes, demandRes, noticeRes, unitRes, productRes] = await Promise.all([
       fetchStatsOverview(),
       fetchListings({ page: 1, size: 4, type: 1 }),
       fetchListings({ page: 1, size: 4, type: 2 }),
       fetchNotices({ page: 1, size: 4, publishStatus: 2 }),
-      fetchUnits({ page: 1, size: 200 })
+      fetchUnits({ page: 1, size: 200 }),
+      fetchProducts({ page: 1, size: 500 })
     ])
+    const productRecords = productRes?.records || []
+    productMap.value = productRecords.reduce((acc, p) => { acc[p.id] = p; return acc }, {})
     stats.value = statsData || {}
     supplyList.value = supplyRes.records
     demandList.value = demandRes.records
@@ -92,8 +103,9 @@ onMounted(loadData)
     <p class="section-subtitle">基于协同过滤算法，根据订单数据智能推荐您可能感兴趣的商品。</p>
     <a-row :gutter="20">
       <a-col v-for="item in recommendList" :key="item.id" :xs="12" :md="8">
-        <div class="soft-panel" style="height: 100%;">
-          <div class="card-title">{{ item.name }}</div>
+        <div class="soft-panel recommend-card" style="height: 100%;">
+          <img class="recommend-img" :src="productImageFor(item)" @error="(e) => (e.target.src = productFallbackImage(item.name))" />
+          <div class="card-title" style="margin-top: 10px;">{{ item.name }}</div>
           <div class="card-desc">{{ item.origin || '产地未知' }} · {{ item.description || '' }}</div>
           <a-tag color="green" style="margin-top: 8px;">{{ item.traceable ? '可溯源' : '普通商品' }}</a-tag>
         </div>
@@ -126,13 +138,14 @@ onMounted(loadData)
           <a-card title="优质供应" :bordered="false" class="card-surface">
             <template v-if="supplyList.length">
               <a-space direction="vertical" fill>
-                <div v-for="item in supplyList" :key="item.id" class="soft-panel">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                      <div class="card-title">{{ item.title }}</div>
-                      <div class="card-desc">{{ item.location || '产地待补充' }} · 数量 {{ item.quantity }} {{ formatUnit(item.unitId) }}</div>
+                <div v-for="item in supplyList" :key="item.id" class="soft-panel home-listing">
+                  <img class="home-listing-img" :src="imageForListing(item)" @error="(e) => (e.target.src = productFallbackImage(item.title))" />
+                  <div style="flex:1; min-width:0;">
+                    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                      <span style="overflow:hidden; text-overflow:ellipsis;">{{ item.title }}</span>
+                      <a-tag color="green">{{ item.price ? `￥${item.price}/${formatUnit(item.unitId)}` : '价格面议' }}</a-tag>
                     </div>
-                    <a-tag color="green">{{ item.price ? `￥${item.price}/${formatUnit(item.unitId)}` : '价格面议' }}</a-tag>
+                    <div class="card-desc" style="margin-top:4px;">{{ item.location || '产地待补充' }} · 数量 {{ item.quantity }} {{ formatUnit(item.unitId) }}</div>
                   </div>
                 </div>
               </a-space>
@@ -164,16 +177,30 @@ onMounted(loadData)
 
   <section class="section">
     <h2 class="section-title">平台能力亮点</h2>
-    <p class="section-subtitle">围绕交易、履约、溯源与服务持续迭代。</p>
+    <p class="section-subtitle">以关键指标呈现平台能力，所有数据实时同步于运行监控系统。</p>
     <a-row :gutter="20">
-      <a-col v-for="item in platformHighlights" :key="item.title" :xs="24" :md="12">
-        <div class="soft-panel" style="height: 100%; display: flex; gap: 14px; align-items: flex-start;">
-          <div class="flow-icon-wrap" style="flex-shrink: 0; margin-top: 2px;">
-            <component :is="item.icon" style="font-size: 22px; color: #2b8a57;" />
+      <a-col v-for="item in platformHighlights" :key="item.title" :xs="24" :sm="12" :md="6">
+        <div class="highlight-card" :style="{ '--hl': item.color }">
+          <div class="highlight-top">
+            <div class="highlight-icon">
+              <component :is="item.icon" />
+            </div>
+            <div class="highlight-trend" :class="{ up: item.trendUp }">
+              <icon-arrow-rise v-if="item.trendUp" />
+              <icon-arrow-fall v-else />
+              <span>{{ item.trend }}</span>
+            </div>
           </div>
-          <div>
-            <div class="card-title">{{ item.title }}</div>
-            <p class="card-desc">{{ item.desc }}</p>
+          <div class="highlight-title">{{ item.title }}</div>
+          <div class="highlight-metric">
+            <span class="val">{{ item.value }}</span>
+            <span class="unit">{{ item.unit }}</span>
+          </div>
+          <div class="highlight-metric-label">{{ item.metricLabel }}</div>
+          <div class="highlight-bar"><div class="highlight-bar-fill" :style="{ width: item.progress + '%' }"></div></div>
+          <p class="highlight-desc">{{ item.desc }}</p>
+          <div class="highlight-tags">
+            <span v-for="t in item.tags" :key="t" class="highlight-tag">{{ t }}</span>
           </div>
         </div>
       </a-col>
@@ -208,3 +235,83 @@ onMounted(loadData)
     </a-row>
   </section>
 </template>
+
+<style scoped>
+.recommend-card { display: flex; flex-direction: column; }
+.recommend-img {
+  width: 100%; aspect-ratio: 5 / 3; object-fit: cover;
+  border-radius: 10px; background: #f3f5f4;
+}
+.home-listing { display: flex; gap: 12px; align-items: center; }
+.home-listing-img {
+  width: 84px; height: 84px; object-fit: cover;
+  border-radius: 10px; background: #f3f5f4; flex-shrink: 0;
+}
+
+.highlight-card {
+  position: relative;
+  height: 100%;
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--hl) 18%, #fff) 0%, #ffffff 60%);
+  border: 1px solid color-mix(in srgb, var(--hl) 28%, #e7efe9);
+  box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--hl) 60%, #000);
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.highlight-card::after {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--hl) 18%, transparent);
+  pointer-events: none;
+}
+.highlight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 32px -20px color-mix(in srgb, var(--hl) 70%, #000);
+}
+.highlight-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.highlight-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--hl); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 6px 14px -6px var(--hl);
+}
+.highlight-trend {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px; font-size: 12px;
+  background: #fee4e2; color: #b42318;
+}
+.highlight-trend.up { background: #e3f5e9; color: #0b7a3b; }
+.highlight-title { font-size: 15px; font-weight: 600; color: var(--ink-700, #1f2a25); }
+.highlight-metric { margin-top: 6px; display: flex; align-items: baseline; gap: 4px; }
+.highlight-metric .val { font-size: 32px; font-weight: 700; color: var(--hl); }
+.highlight-metric .unit { font-size: 14px; color: var(--ink-500, #5b6a64); font-weight: 600; }
+.highlight-metric-label { color: var(--ink-500, #5b6a64); font-size: 12px; margin-top: 2px; }
+.highlight-bar {
+  margin-top: 10px; height: 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--hl) 12%, #eef3f0);
+  overflow: hidden;
+}
+.highlight-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--hl), color-mix(in srgb, var(--hl) 60%, #fff));
+  transition: width 0.4s ease;
+}
+.highlight-desc {
+  margin: 12px 0 10px; font-size: 12.5px; color: var(--ink-500, #5b6a64); line-height: 1.6;
+}
+.highlight-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.highlight-tag {
+  font-size: 11px; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--hl) 14%, #f5faf7);
+  color: color-mix(in srgb, var(--hl) 75%, #1f2a25);
+  border: 1px solid color-mix(in srgb, var(--hl) 30%, transparent);
+}
+</style>

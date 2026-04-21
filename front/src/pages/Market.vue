@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchListings, fetchUnits, fetchTraceByBatch, fetchTraces } from '../api'
+import { fetchListings, fetchUnits, fetchTraceByBatch, fetchTraces, fetchProducts } from '../api'
+import { productImageFor, productFallbackImage } from '../utils/productImage'
 
 const FAVORITES_KEY = 'agri_favorites'
 
@@ -14,6 +15,13 @@ const error = ref('')
 const supplyList = ref([])
 const demandList = ref([])
 const unitMap = ref({})
+const productMap = ref({})
+
+const imageForListing = (item) => {
+  const prod = productMap.value[item.productId]
+  if (prod?.imageUrl) return prod.imageUrl
+  return productFallbackImage(item.title || prod?.name || '农产品')
+}
 // 收藏响应式版本号
 const favVersion = ref(0)
 
@@ -79,10 +87,11 @@ const loadData = async () => {
   loading.value = true
   error.value = ''
   try {
-    const [supplyRes, demandRes, unitRes] = await Promise.all([
+    const [supplyRes, demandRes, unitRes, productRes] = await Promise.all([
       fetchListings({ page: 1, size: 100, type: 1 }),
       fetchListings({ page: 1, size: 100, type: 2 }),
-      fetchUnits({ page: 1, size: 200 })
+      fetchUnits({ page: 1, size: 200 }),
+      fetchProducts({ page: 1, size: 500 })
     ])
     supplyList.value = supplyRes.records
     demandList.value = demandRes.records
@@ -91,6 +100,8 @@ const loadData = async () => {
       acc[unit.id] = unit.symbol || unit.name
       return acc
     }, {})
+    const productRecords = productRes?.records || []
+    productMap.value = productRecords.reduce((acc, p) => { acc[p.id] = p; return acc }, {})
   } catch (err) {
     error.value = err?.message || '供需数据加载失败'
   } finally {
@@ -213,21 +224,24 @@ onMounted(loadData)
         <a-spin :loading="loading" style="width: 100%;">
           <a-row :gutter="20" v-if="filteredSupply.length">
             <a-col v-for="item in filteredSupply" :key="item.id" :xs="24" :md="12">
-              <a-card class="card-surface" :bordered="false">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <div class="card-title">{{ item.title }}</div>
-                    <div class="card-desc">{{ item.location || '产地待补充' }} · 数量 {{ item.quantity }} {{ formatUnit(item.unitId) }}</div>
+              <a-card class="card-surface market-card" :bordered="false">
+                <div class="market-row">
+                  <img class="market-img" :src="imageForListing(item)" @error="(e) => (e.target.src = productFallbackImage(item.title))" />
+                  <div class="market-main">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                      <div class="card-title" style="flex:1; overflow:hidden; text-overflow:ellipsis;">{{ item.title }}</div>
+                      <a-tag color="green">{{ item.price ? `￥${item.price}/${formatUnit(item.unitId)}` : '价格面议' }}</a-tag>
+                    </div>
+                    <div class="card-desc" style="margin-top: 4px;">{{ item.location || '产地待补充' }} · 数量 {{ item.quantity }} {{ formatUnit(item.unitId) }}</div>
+                    <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                      <a-button size="small" type="primary" @click="$router.push(`/market/supply/${item.id}`)">查看详情</a-button>
+                      <a-button size="small" @click="toggleFavorite(item)">
+                        <template #icon><icon-heart-fill v-if="isFavorited(item.id)" /><icon-heart v-else /></template>
+                        {{ isFavorited(item.id) ? '已收藏' : '收藏' }}
+                      </a-button>
+                      <a-button size="small" @click="showTrace(item)">查看溯源</a-button>
+                    </div>
                   </div>
-                  <a-tag color="green">{{ item.price ? `￥${item.price}/${formatUnit(item.unitId)}` : '价格面议' }}</a-tag>
-                </div>
-                <div style="margin-top: 12px; display: flex; gap: 8px;">
-                  <a-button type="primary" @click="$router.push(`/market/supply/${item.id}`)">查看详情</a-button>
-                  <a-button @click="toggleFavorite(item)">
-                    <template #icon><icon-heart-fill v-if="isFavorited(item.id)" /><icon-heart v-else /></template>
-                    {{ isFavorited(item.id) ? '已收藏' : '收藏' }}
-                  </a-button>
-                  <a-button @click="showTrace(item)">查看溯源</a-button>
                 </div>
               </a-card>
             </a-col>
@@ -284,3 +298,16 @@ onMounted(loadData)
     </a-modal>
   </section>
 </template>
+
+<style scoped>
+.market-row { display: flex; gap: 14px; align-items: stretch; }
+.market-img {
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f3f5f4;
+  flex-shrink: 0;
+}
+.market-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+</style>

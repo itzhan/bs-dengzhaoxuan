@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS biz_order (
   order_no VARCHAR(32) NOT NULL,
   buyer_id BIGINT NOT NULL,
   seller_id BIGINT NOT NULL,
-  status TINYINT NOT NULL COMMENT '1待确认2已确认3配送中4已送达5已完成6已取消7售后中',
+  status TINYINT NOT NULL COMMENT '1待付款2待发货3配送中4已送达5已完成6已取消7售后中',
   total_amount DECIMAL(12,2) NOT NULL,
   total_quantity DECIMAL(12,2) NOT NULL,
   delivery_address VARCHAR(255) NOT NULL,

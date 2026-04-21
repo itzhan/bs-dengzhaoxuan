@@ -34,6 +34,9 @@ export const askAi = (question) => post('/ai/chat', { question })
 export const fetchOrders = async (params) => unwrapPage(await get('/orders', params))
 export const fetchOrderDetail = (id) => get(`/orders/${id}`)
 export const createOrder = (payload) => post('/orders', payload)
+export const payOrder = (id) => post(`/orders/${id}/pay`)
+export const shipOrder = (id) => post(`/orders/${id}/ship`)
+export const confirmOrder = (id) => post(`/orders/${id}/confirm`)
 
 // 商品
 export const fetchProducts = async (params) => unwrapPage(await get('/products', params))
